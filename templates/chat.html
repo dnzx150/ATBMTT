@@ -1,0 +1,1402 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Bảo mật - {{ username }}</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <!-- Trong phần <head> -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsencrypt/3.3.1/jsencrypt.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+        }
+
+        .sidebar {
+            width: 300px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .user-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .status {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .online-dot {
+            width: 8px;
+            height: 8px;
+            background: #4CAF50;
+            border-radius: 50%;
+            margin-left: auto;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .logout-btn {
+            background: #ff4757;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: #ff3838;
+            transform: translateY(-1px);
+        }
+
+        .user-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .user-item {
+            padding: 12px;
+            margin: 5px 0;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-item:hover {
+            background: rgba(102, 126, 234, 0.1);
+            transform: translateX(5px);
+        }
+
+        .user-item.active {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .user-item .user-avatar {
+            width: 35px;
+            height: 35px;
+            font-size: 14px;
+        }
+
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+        }
+
+        .chat-header {
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .chat-with {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .security-info {
+            margin-left: auto;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .security-badge {
+            background: #4CAF50;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            word-wrap: break-word;
+            position: relative;
+            animation: messageSlide 0.3s ease;
+        }
+
+        @keyframes messageSlide {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.sent {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 5px;
+        }
+
+        .message.received {
+            background: #f1f3f4;
+            color: #333;
+            align-self: flex-start;
+            border-bottom-left-radius: 5px;
+        }
+
+        .message-time {
+            font-size: 10px;
+            opacity: 0.7;
+            margin-top: 5px;
+        }
+
+        .message-status {
+            font-size: 10px;
+            opacity: 0.8;
+            margin-top: 2px;
+        }
+
+        .chat-input {
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.8);
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .message-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            outline: none;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .message-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .send-btn {
+            width: 45px;
+            height: 45px;
+            border: none;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            font-size: 18px;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .no-chat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #666;
+            text-align: center;
+        }
+
+        .no-chat-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+
+        .system-message {
+            background: #fff3cd;
+            color: #856404;
+            padding: 10px 15px;
+            border-radius: 10px;
+            font-size: 12px;
+            text-align: center;
+            margin: 10px 0;
+            border-left: 4px solid #ffc107;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            border-left-color: #dc3545;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            border-left-color: #28a745;
+        }
+
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 10px 15px;
+            font-size: 12px;
+            color: #666;
+            font-style: italic;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 2px;
+        }
+
+        .typing-dot {
+            width: 4px;
+            height: 4px;
+            background: #666;
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-10px); }
+        }
+
+        .encryption-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            z-index: 1000;
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: 200px;
+            }
+            
+            .user-list {
+                display: flex;
+                flex-direction: row;
+                overflow-x: auto;
+                overflow-y: hidden;
+            }
+            
+            .user-item {
+                min-width: 120px;
+                flex-shrink: 0;
+            }
+            .modal {
+                display: none;
+                position: fixed;
+                z-index: 1000;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.5);
+                backdrop-filter: blur(5px);
+            }
+
+            .modal-content {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                margin: 5% auto;
+                padding: 0;
+                border-radius: 15px;
+                width: 80%;
+                max-width: 600px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+                animation: modalSlide 0.3s ease;
+            }
+
+            @keyframes modalSlide {
+                from {
+                    opacity: 0;
+                    transform: translateY(-50px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            .modal-header {
+                background: rgba(255, 255, 255, 0.1);
+                padding: 20px;
+                border-radius: 15px 15px 0 0;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            }
+
+            .modal-title {
+                color: white;
+                font-size: 20px;
+                font-weight: 600;
+                margin: 0;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+
+            .modal-close {
+                background: none;
+                border: none;
+                color: white;
+                font-size: 24px;
+                cursor: pointer;
+                width: 30px;
+                height: 30px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.3s ease;
+            }
+
+            .modal-close:hover {
+                background: rgba(255, 255, 255, 0.2);
+                transform: rotate(90deg);
+            }
+
+            .modal-body {
+                padding: 20px;
+                background: white;
+                border-radius: 0 0 15px 15px;
+            }
+
+            .user-info-modal {
+                display: flex;
+                align-items: center;
+                gap: 15px;
+                margin-bottom: 20px;
+                padding: 15px;
+                background: #f8f9fa;
+                border-radius: 10px;
+                border-left: 4px solid #667eea;
+            }
+
+            .user-avatar-modal {
+                width: 50px;
+                height: 50px;
+                border-radius: 50%;
+                background: linear-gradient(45deg, #667eea, #764ba2);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-weight: bold;
+                font-size: 20px;
+            }
+
+            .user-details-modal {
+                flex: 1;
+            }
+
+            .user-name-modal {
+                font-size: 18px;
+                font-weight: 600;
+                color: #333;
+                margin: 0 0 5px 0;
+            }
+
+            .user-status-modal {
+                font-size: 14px;
+                color: #666;
+                margin: 0;
+            }
+
+            .key-section {
+                margin-bottom: 20px;
+            }
+
+            .key-label {
+                font-weight: 600;
+                color: #333;
+                margin-bottom: 10px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .key-display {
+                background: #f8f9fa;
+                border: 2px solid #e9ecef;
+                border-radius: 8px;
+                padding: 15px;
+                font-family: 'Courier New', monospace;
+                font-size: 12px;
+                line-height: 1.5;
+                word-break: break-all;
+                max-height: 200px;
+                overflow-y: auto;
+                position: relative;
+            }
+
+            .key-display:hover {
+                border-color: #667eea;
+            }
+
+            .copy-button {
+                background: #667eea;
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 12px;
+                margin-top: 10px;
+                transition: all 0.3s ease;
+                display: flex;
+                align-items: center;
+                gap: 5px;
+            }
+
+            .copy-button:hover {
+                background: #5a6fd8;
+                transform: translateY(-1px);
+            }
+
+            .copy-button:active {
+                transform: translateY(0);
+            }
+
+            .copy-success {
+                background: #28a745 !important;
+            }
+
+            .key-info {
+                background: #e3f2fd;
+                border: 1px solid #90caf9;
+                border-radius: 8px;
+                padding: 15px;
+                margin-top: 15px;
+            }
+
+            .key-info h4 {
+                color: #1976d2;
+                margin: 0 0 10px 0;
+                font-size: 14px;
+            }
+
+            .key-info ul {
+                margin: 0;
+                padding-left: 20px;
+                color: #555;
+            }
+
+            .key-info li {
+                margin-bottom: 5px;
+                font-size: 13px;
+            }
+
+            .loading-spinner {
+                display: inline-block;
+                width: 20px;
+                height: 20px;
+                border: 3px solid #f3f3f3;
+                border-top: 3px solid #667eea;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+            }
+
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+
+            .error-message-modal {
+                background: #f8d7da;
+                color: #721c24;
+                border: 1px solid #f5c6cb;
+                border-radius: 8px;
+                padding: 15px;
+                margin-top: 15px;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="user-info">
+                <div class="user-avatar">{{ username[0].upper() }}</div>
+                <div>
+                    <div class="user-name">{{ username }}</div>
+                    <div class="status">Đang hoạt động</div>
+                </div>
+                <div class="online-dot"></div>
+            </div>
+            <button class="logout-btn" onclick="logout()">🚪 Đăng xuất</button>
+        </div>
+        
+        <div class="user-list" id="userList">
+            {% for user in users %}
+            <div class="user-item" onclick="selectUser('{{ user.ten_dang_nhap }}')">
+                <div class="user-avatar">{{ user.ten_dang_nhap[0].upper() }}</div>
+                <div>
+                    <div class="user-name">{{ user.ten_dang_nhap }}</div>
+                    <div class="status">Nhấn để chat</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="chat-container">
+        <div class="chat-header" id="chatHeader" style="display: none;">
+            <div class="user-avatar" id="currentChatAvatar"></div>
+            <div class="chat-with" id="currentChatUser">Chọn người để chat</div>
+            <div class="security-info">
+                <div class="security-badge rsa-key" onclick="showRSAKeyModal()" title="Xem khóa RSA công khai">🔑 RSA</div>
+            </div>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <div class="no-chat">
+                <div class="no-chat-icon">💬</div>
+                <h3>Chào mừng đến với Chat Bảo mật!</h3>
+                <p>Chọn một người dùng từ danh sách bên trái để bắt đầu cuộc trò chuyện được mã hóa DES và xác thực RSA.</p>
+            </div>
+        </div>
+
+        <div class="chat-input" id="chatInput" style="display: none;">
+            <input type="text" class="message-input" id="messageInput" placeholder="Nhập tin nhắn..." onkeypress="handleKeyPress(event)">
+            <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
+        </div>
+    </div>
+    <div id="rsaKeyModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">
+                🔑 Khóa RSA Công Khai
+            </h3>
+            <button class="modal-close" onclick="closeRSAKeyModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="user-info-modal">
+                <div class="user-avatar-modal" id="modalUserAvatar">U</div>
+                <div class="user-details-modal">
+                    <h4 class="user-name-modal" id="modalUserName">Tên người dùng</h4>
+                    <p class="user-status-modal">Khóa RSA công khai để mã hóa tin nhắn</p>
+                </div>
+            </div>
+            
+            <div class="key-section">
+                <div class="key-label">
+                    🔐 Khóa Công Khai (PEM Format)
+                </div>
+                <div class="key-display" id="publicKeyDisplay">
+                    <div class="loading-spinner"></div> Đang tải khóa...
+                </div>
+                <button class="copy-button" id="copyKeyButton" onclick="copyPublicKey()">
+                    📋 Sao chép khóa
+                </button>
+            </div>
+            
+            <div class="key-info">
+                <h4>ℹ️ Thông tin về khóa RSA:</h4>
+                <ul>
+                    <li>Khóa này được sử dụng để mã hóa khóa DES</li>
+                    <li>Chỉ người nhận mới có thể giải mã bằng khóa riêng tư</li>
+                    <li>Khóa công khai có thể chia sẻ an toàn</li>
+                    <li>Độ dài khóa: 2048 bit (256 bytes)</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="encryption-status" id="encryptionStatus"></div>
+
+    <script>
+        let ws = null;
+        let currentChatUser = null;
+        let currentUserPublicKey = null;
+        let desKey = null;
+        let messages = {};
+        let handshakeComplete = false;
+
+        const username = "{{ username }}";
+
+        // Khởi tạo WebSocket
+        function initWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+            
+            ws.onopen = function() {
+                console.log('🔗 Kết nối WebSocket thành công');
+                ws.send(JSON.stringify({
+                    type: "hello",
+                    username: username
+                }));
+            };
+            
+            ws.onmessage = function(event) {
+                try {
+                    const msg = JSON.parse(event.data);
+                    handleWebSocketMessage(msg);
+                } catch (e) {
+                    console.error('Lỗi phân tích JSON:', e);
+                }
+            };
+            
+            ws.onclose = function() {
+                console.log('🔌 WebSocket đã đóng');
+                showSystemMessage('Mất kết nối với server. Đang thử kết nối lại...', 'error');
+                setTimeout(initWebSocket, 3000);
+            };
+            
+            ws.onerror = function(error) {
+                console.error('❌ WebSocket error:', error);
+            };
+        }
+        // Xử lý tin nhắn WebSocket
+        function handleWebSocketMessage(msg) {
+            console.log('📨 Nhận tin nhắn:', msg);
+            
+            switch(msg.type) {
+                case 'ready':
+                    showSystemMessage(msg.message, 'success');
+                    break;
+                    
+                case 'key_exchange':
+                    handleKeyExchange(msg);
+                    break;
+                    
+                case 'message':
+                    handleIncomingMessage(msg);
+                    break;
+                    
+                case 'ack':
+                    handleAck(msg);
+                    break;
+                    
+                case 'nack':
+                    handleNack(msg);
+                    break;
+            }
+        }
+
+        // Chọn người dùng để chat
+        async function selectUser(targetUsername) {
+            if (currentChatUser === targetUsername) return;
+            
+            // Reset trạng thái
+            currentChatUser = targetUsername;
+            currentUserPublicKey = null;
+            desKey = null;
+            handshakeComplete = false;
+            
+            // Cập nhật UI
+            document.querySelectorAll('.user-item').forEach(item => item.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            
+            document.getElementById('currentChatUser').textContent = targetUsername;
+            document.getElementById('currentChatAvatar').textContent = targetUsername[0].toUpperCase();
+            document.getElementById('chatHeader').style.display = 'flex';
+            document.getElementById('chatInput').style.display = 'flex';
+            
+            // Hiển thị tin nhắn cũ
+            displayMessages(targetUsername);
+            
+            // Bắt đầu handshake
+            await startHandshake(targetUsername);
+        }
+
+        // Bắt đầu handshake
+        async function startHandshake(targetUsername) {
+            try {
+                showEncryptionStatus('Đang thực hiện handshake...');
+                
+                // Lấy public key của người nhận
+                const response = await fetch(`/get_public_key?username=${targetUsername}`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                currentUserPublicKey = data.public_key;
+                
+                // Tạo DES key
+                desKey = generateRandomKey(8); // DES key 8 bytes
+                
+                // Mã hóa DES key bằng RSA
+                const encryptedDesKey = await encryptWithRSA(desKey, currentUserPublicKey);
+                
+                // Ký thông tin
+                const signInfo = {
+                    from: username,
+                    to: targetUsername,
+                    timestamp: Date.now()
+                };
+                
+                const signResponse = await fetch('/sign_info', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(signInfo)
+                });
+                
+                const signData = await signResponse.json();
+                
+                // Gửi key exchange
+                ws.send(JSON.stringify({
+                    type: "key_exchange",
+                    from: username,
+                    to: targetUsername,
+                    signed_info: signData.signature,
+                    encrypted_des_key: encryptedDesKey
+                }));
+                
+                showEncryptionStatus('Handshake hoàn thành ✓');
+                handshakeComplete = true;
+                
+            } catch (error) {
+                console.error('❌ Handshake thất bại:', error);
+                showSystemMessage(`Lỗi handshake: ${error.message}`, 'error');
+            }
+        }
+
+        // Xử lý key exchange
+        async function handleKeyExchange(msg) {
+            try {
+        showEncryptionStatus('Đang xử lý key exchange...');
+        
+        // Thêm log debug
+        console.log("Encrypted DES key being sent:", msg.encrypted_des_key.substring(0, 50) + "...");
+        
+        const response = await fetch('/decrypt_des_key', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                encrypted_des_key: msg.encrypted_des_key 
+            })
+        });
+
+        const responseText = await response.text();
+        console.log("Server response:", responseText);
+        
+        if (!response.ok) {
+            let errorMsg = `Lỗi server (${response.status}): `;
+            try {
+                const errorData = JSON.parse(responseText);
+                errorMsg += errorData.error || errorData.details || 'Lỗi không xác định';
+                if (errorData.debug_info) {
+                    console.error("Debug info from server:", errorData.debug_info);
+                }
+            } catch {
+                errorMsg += responseText.substring(0, 100);
+            }
+            throw new Error(errorMsg);
+        }
+
+        const data = JSON.parse(responseText);
+        
+        if (!data.des_data) {
+            throw new Error('Không nhận được khóa DES từ server');
+        }
+        
+        desKey = data.des_data;
+        handshakeComplete = true;
+        
+        showEncryptionStatus('Key exchange hoàn thành ✓');
+        showSystemMessage(`🔐 Đã thiết lập kết nối bảo mật với ${msg.from}`, 'success');
+        
+    } catch (error) {
+        console.error('❌ Key exchange thất bại:', error);
+        showSystemMessage(`Lỗi trao đổi khóa: ${error.message}`, 'error');
+        
+        // Thử lại sau 5 giây
+        setTimeout(() => {
+            if (currentChatUser) {
+                console.log("Tự động thử lại handshake...");
+                startHandshake(currentChatUser);
+            }
+        }, 5000);
+    }
+}
+        // Gửi tin nhắn
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message || !currentChatUser || !handshakeComplete || !desKey) {
+                if (!handshakeComplete) {
+                    showSystemMessage('Vui lòng đợi handshake hoàn thành', 'error');
+                }
+                return;
+            }
+            
+            try {
+                showEncryptionStatus('Đang mã hóa tin nhắn...');
+        
+        // Mã hóa tin nhắn bằng DES
+        const encryptedMessage = await encryptWithDES(message, desKey);
+        
+        // Tạo hash từ bản mã (không phải từ bản rõ)
+        const hash = await createSHA256Hash(encryptedMessage);
+                
+                // Ký tin nhắn
+                const signData = {
+                    cipher: encryptedMessage,
+                    hash: hash,
+                    from: username,
+                    to: currentChatUser,
+                    timestamp: Date.now()
+                };
+                
+                const signResponse = await fetch('/sign_info', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(signData)
+                });
+                
+                const signature = await signResponse.json();
+                
+                // Gửi tin nhắn
+                ws.send(JSON.stringify({
+                    type: "message",
+                    from: username,
+                    to: currentChatUser,
+                    cipher: encryptedMessage,
+                    hash: hash,
+                    sig: signature.signature
+                }));
+                
+                // Hiển thị tin nhắn đã gửi
+                addMessage(currentChatUser, {
+                    content: message,
+                    type: 'sent',
+                    timestamp: Date.now(),
+                    status: 'sending'
+                });
+                
+                input.value = '';
+                showEncryptionStatus('Tin nhắn đã được mã hóa và gửi ✓');
+                
+            } catch (error) {
+        console.error('❌ Gửi tin nhắn thất bại:', error);
+        showSystemMessage(`Lỗi gửi tin nhắn: ${error.message}`, 'error');
+        showEncryptionStatus('Lỗi mã hóa!');
+            }
+        }
+        
+        // Xử lý tin nhắn đến
+        async function handleIncomingMessage(msg) {
+            try {
+                showEncryptionStatus('Đang giải mã tin nhắn...');
+                
+                // Kiểm tra hash
+                const computedHash = await createSHA256Hash(msg.cipher);
+                if (computedHash !== msg.hash) {
+                    throw new Error('Hash không khớp - tin nhắn có thể bị thay đổi');
+                }
+                
+                // Giải mã tin nhắn
+                const decryptedMessage = await decryptWithDES(msg.cipher, desKey);
+                
+                // Hiển thị tin nhắn
+                addMessage(msg.from, {
+                    content: decryptedMessage,
+                    type: 'received',
+                    timestamp: msg.timestamp || Date.now()
+                });
+                
+                // Gửi ACK
+                ws.send(JSON.stringify({
+                    type: "ack",
+                    from: username,
+                    to: msg.from,
+                    message: "Tin nhắn đã nhận và xác minh thành công"
+                }));
+                
+                showEncryptionStatus('Tin nhắn đã được giải mã ✓');
+                
+            } catch (error) {
+                console.error('❌ Xử lý tin nhắn thất bại:', error);
+                
+                // Gửi NACK
+                ws.send(JSON.stringify({
+                    type: "nack",
+                    from: username,
+                    to: msg.from,
+                    reason: error.message
+                }));
+                
+                showSystemMessage(`Lỗi xử lý tin nhắn: ${error.message}`, 'error');
+            }
+        }
+
+        // Xử lý ACK/NACK
+        function handleAck(msg) {
+            showSystemMessage(`✅ ${msg.from}: ${msg.message}`, 'success');
+            updateMessageStatus(msg.from, 'delivered');
+        }
+
+        function handleNack(msg) {
+            showSystemMessage(`❌ ${msg.from}: ${msg.reason}`, 'error');
+            updateMessageStatus(msg.from, 'failed');
+        }
+
+        // Thêm tin nhắn vào UI
+        function addMessage(chatUser, messageData) {
+            if (!messages[chatUser]) {
+                messages[chatUser] = [];
+            }
+            
+            messages[chatUser].push(messageData);
+            
+            if (chatUser === currentChatUser || messageData.type === 'sent') {
+                displayMessages(currentChatUser);
+            }
+        }
+
+        // Hiển thị tin nhắn
+        function displayMessages(chatUser) {
+            const messagesContainer = document.getElementById('chatMessages');
+            messagesContainer.innerHTML = '';
+            
+            if (!messages[chatUser] || messages[chatUser].length === 0) {
+                messagesContainer.innerHTML = `
+                    <div class="no-chat">
+                        <div class="no-chat-icon">🔐</div>
+                        <h3>Cuộc trò chuyện bảo mật với ${chatUser}</h3>
+                        <p>Tất cả tin nhắn được mã hóa DES và xác thực RSA</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            messages[chatUser].forEach(msg => {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${msg.type}`;
+                
+                const time = new Date(msg.timestamp).toLocaleTimeString('vi-VN');
+                const status = msg.status ? `<div class="message-status">${getStatusText(msg.status)}</div>` : '';
+                
+                messageDiv.innerHTML = `
+                    <div>${msg.content}</div>
+                    <div class="message-time">${time}</div>
+                    ${status}
+                `;
+                
+                messagesContainer.appendChild(messageDiv);
+            });
+            
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // Cập nhật trạng thái tin nhắn
+        function updateMessageStatus(chatUser, status) {
+            if (messages[chatUser] && messages[chatUser].length > 0) {
+                const lastMessage = messages[chatUser][messages[chatUser].length - 1];
+                if (lastMessage.type === 'sent') {
+                    lastMessage.status = status;
+                    displayMessages(currentChatUser);
+                }
+            }
+        }
+
+        // Hiển thị tin nhắn hệ thống
+        function showSystemMessage(message, type = 'info') {
+            const messagesContainer = document.getElementById('chatMessages');
+            const systemMsg = document.createElement('div');
+            systemMsg.className = `system-message ${type}-message`;
+            systemMsg.textContent = message;
+            messagesContainer.appendChild(systemMsg);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+            // Tự động ẩn sau 5 giây
+            setTimeout(() => {
+                if (systemMsg.parentNode) {
+                    systemMsg.remove();
+                }
+            }, 5000);
+        }
+
+        // Hiển thị trạng thái mã hóa
+        function showEncryptionStatus(message) {
+            const statusDiv = document.getElementById('encryptionStatus');
+            statusDiv.textContent = message;
+            statusDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 3000);
+        }
+
+        // Xử lý phím Enter
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        // Đăng xuất
+        function logout() {
+            if (confirm('Bạn có chắc muốn đăng xuất?')) {
+                window.location.href = '/logout';
+            }
+        }
+
+        // Helper functions
+        function getStatusText(status) {
+            const statusMap = {
+                'sending': '⏳ Đang gửi...',
+                'delivered': '✅ Đã gửi',
+                'failed': '❌ Gửi thất bại'
+            };
+            return statusMap[status] || status;
+        }
+
+        function generateRandomKey(length) {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            let result = '';
+            for (let i = 0; i < length; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        }
+
+        // Crypto functions (simplified for demo)
+       async function encryptWithRSA(data, publicKeyPem) {
+    return new Promise((resolve, reject) => {
+        try {
+            // Chuẩn hóa khóa công khai
+            const normalizedKey = normalizePublicKey(publicKeyPem);
+            
+            const encrypt = new JSEncrypt();
+            encrypt.setPublicKey(normalizedKey);
+            
+            // Giới hạn kích thước dữ liệu
+            if (data.length > 190) { // 2048-bit RSA giới hạn ~245 bytes
+                throw new Error(`Dữ liệu quá dài (${data.length} > 190)`);
+            }
+            
+            // Mã hóa với OAEP
+            const encrypted = encrypt.encrypt(data);
+            
+            if (!encrypted) {
+                throw new Error('JSEncrypt trả về null');
+            }
+            
+            console.log("Mã hóa thành công. Kích thước:", encrypted.length);
+            resolve(encrypted);
+        } catch (error) {
+            console.error("Lỗi mã hóa RSA:", error);
+            reject(error);
+        }
+    });
+}
+
+function normalizePublicKey(pem) {
+    // Chuẩn hóa định dạng PEM
+    pem = pem.trim();
+    if (!pem.startsWith('-----BEGIN')) {
+        pem = `-----BEGIN PUBLIC KEY-----\n${pem}\n-----END PUBLIC KEY-----`;
+    }
+    return pem;
+}
+
+
+            
+            
+
+
+        // DES - Encrypt với CFB mode
+        // DES - Encrypt với CBC mode
+async function encryptWithDES(message, key) {
+    try {
+        const keyUtf8 = CryptoJS.enc.Utf8.parse(key.substring(0, 8));
+        const iv = CryptoJS.lib.WordArray.random(8);
+        
+        // Mã hóa với IV ngẫu nhiên
+        const encrypted = CryptoJS.DES.encrypt(
+            CryptoJS.enc.Utf8.parse(message),
+            keyUtf8,
+            {
+                iv: iv,
+                mode: CryptoJS.mode.CBC,
+                padding: CryptoJS.pad.Pkcs7
+            }
+        );
+        
+        // Kết hợp IV và ciphertext dạng Base64
+        const ivBase64 = CryptoJS.enc.Base64.stringify(iv);
+        const ciphertextBase64 = encrypted.toString();
+        
+        return `${ivBase64}:${ciphertextBase64}`;
+        
+    } catch (error) {
+        console.error('❌ Lỗi mã hóa DES:', error);
+        throw new Error('Mã hóa DES thất bại');
+    }
+}
+
+// DES - Decrypt
+async function decryptWithDES(ciphertext, key) {
+    try {
+        const keyUtf8 = CryptoJS.enc.Utf8.parse(key.substring(0, 8));
+        
+        // Tách IV và ciphertext
+        const [ivBase64, ciphertextBase64] = ciphertext.split(':');
+        const iv = CryptoJS.enc.Base64.parse(ivBase64);
+        const encrypted = CryptoJS.enc.Base64.parse(ciphertextBase64);
+        
+        const decrypted = CryptoJS.DES.decrypt(
+            { ciphertext: encrypted },
+            keyUtf8,
+            {
+                iv: iv,
+                mode: CryptoJS.mode.CBC,
+                padding: CryptoJS.pad.Pkcs7
+            }
+        );
+        
+        return decrypted.toString(CryptoJS.enc.Utf8);
+        
+    } catch (error) {
+        console.error('❌ Lỗi giải mã DES:', error);
+        throw new Error('Giải mã DES thất bại');
+    }
+}
+
+
+        async function createSHA256Hash(data) {
+    // Sử dụng CryptoJS thay vì Web Crypto API
+    return CryptoJS.SHA256(data).toString(CryptoJS.enc.Hex);
+}
+
+        function pemToArrayBuffer(pem) {
+            const b64Lines = pem.replace(/-----[^-]+-----/g, '').replace(/\s/g, '');
+            const byteString = atob(b64Lines);
+            const byteArray = new Uint8Array(byteString.length);
+            for (let i = 0; i < byteString.length; i++) {
+                byteArray[i] = byteString.charCodeAt(i);
+            }
+            return byteArray.buffer;
+        }
+
+        // Khởi tạo ứng dụng
+        document.addEventListener('DOMContentLoaded', function() {
+            initWebSocket();
+            
+            // Focus vào input khi chọn user
+            document.getElementById('messageInput').focus();
+        });
+
+        // Xử lý disconnect khi đóng trang
+        window.addEventListener('beforeunload', function() {
+            if (ws) {
+                ws.close();
+            }
+        });
+        async function showRSAKeyModal() {
+            // Kiểm tra xem có người dùng nào được chọn không
+            if (!currentChatUser) {
+                showSystemMessage('Vui lòng chọn một người dùng để xem khóa RSA', 'error');
+                return;
+            }
+            
+            // Hiển thị modal
+            const modal = document.getElementById('rsaKeyModal');
+            modal.style.display = 'block';
+            
+            // Cập nhật thông tin người dùng
+            document.getElementById('modalUserName').textContent = currentChatUser;
+            document.getElementById('modalUserAvatar').textContent = currentChatUser[0].toUpperCase();
+            
+            // Reset trạng thái
+            const keyDisplay = document.getElementById('publicKeyDisplay');
+            const copyButton = document.getElementById('copyKeyButton');
+            
+            keyDisplay.innerHTML = '<div class="loading-spinner"></div> Đang tải khóa...';
+            copyButton.disabled = true;
+            copyButton.classList.remove('copy-success');
+            copyButton.innerHTML = '📋 Sao chép khóa';
+            
+            try {
+                // Lấy khóa công khai từ server
+                const response = await fetch(`/get_public_key?username=${currentChatUser}`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                // Hiển thị khóa
+                keyDisplay.textContent = data.public_key;
+                copyButton.disabled = false;
+                
+                // Lưu khóa để copy
+                copyButton.setAttribute('data-key', data.public_key);
+                
+            } catch (error) {
+                console.error('❌ Lỗi khi tải khóa RSA:', error);
+                keyDisplay.innerHTML = `
+                    <div class="error-message-modal">
+                        ❌ Không thể tải khóa RSA: ${error.message}
+                    </div>
+                `;
+                copyButton.disabled = true;
+            }
+        }
+
+        function closeRSAKeyModal() {
+            const modal = document.getElementById('rsaKeyModal');
+            modal.style.display = 'none';
+        }
+
+        async function copyPublicKey() {
+            const copyButton = document.getElementById('copyKeyButton');
+            const publicKey = copyButton.getAttribute('data-key');
+            
+            if (!publicKey) {
+                showSystemMessage('Không có khóa để sao chép', 'error');
+                return;
+            }
+            
+            try {
+                // Sao chép vào clipboard
+                await navigator.clipboard.writeText(publicKey);
+                
+                // Hiển thị thông báo thành công
+                copyButton.classList.add('copy-success');
+                copyButton.innerHTML = '✅ Đã sao chép!';
+                
+                // Reset sau 2 giây
+                setTimeout(() => {
+                    copyButton.classList.remove('copy-success');
+                    copyButton.innerHTML = '📋 Sao chép khóa';
+                }, 2000);
+                
+                showSystemMessage('Đã sao chép khóa RSA vào clipboard', 'success');
+                
+            } catch (error) {
+                console.error('❌ Lỗi khi sao chép:', error);
+                showSystemMessage('Không thể sao chép khóa. Vui lòng chọn và copy thủ công.', 'error');
+                
+                // Fallback: select text
+                const keyDisplay = document.getElementById('publicKeyDisplay');
+                const range = document.createRange();
+                range.selectNode(keyDisplay);
+                window.getSelection().removeAllRanges();
+                window.getSelection().addRange(range);
+            }
+        }
+
+        // Đóng modal khi click bên ngoài
+        window.onclick = function(event) {
+            const modal = document.getElementById('rsaKeyModal');
+            if (event.target === modal) {
+                closeRSAKeyModal();
+            }
+        }
+
+        // Xử lý phím ESC để đóng modal
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                const modal = document.getElementById('rsaKeyModal');
+                if (modal.style.display === 'block') {
+                    closeRSAKeyModal();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

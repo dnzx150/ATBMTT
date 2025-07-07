@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng nhập</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            position: relative;
+            overflow: hidden;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+            font-size: 28px;
+            font-weight: 600;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 25px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 15px 50px 15px 20px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .input-group label {
+            position: absolute;
+            top: 15px;
+            left: 20px;
+            color: #666;
+            font-size: 16px;
+            pointer-events: none;
+            transition: all 0.3s ease;
+            background: transparent;
+            padding: 0 5px;
+        }
+
+        .input-group input:focus + label,
+        .input-group input:not(:placeholder-shown) + label {
+            top: -10px;
+            font-size: 12px;
+            color: #667eea;
+            background: white;
+            border-radius: 4px;
+        }
+
+        .icon {
+            position: absolute;
+            right: 15px;
+            top: 15px;
+            color: #666;
+            font-size: 18px;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        .switch-form {
+            text-align: center;
+            margin-top: 25px;
+            color: #666;
+        }
+
+        .switch-form a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .switch-form a:hover {
+            text-decoration: underline;
+            color: #764ba2;
+        }
+
+        .flash-messages {
+            list-style: none;
+            margin-top: 20px;
+        }
+
+        .flash-messages li {
+            padding: 12px 16px;
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 8px;
+            color: #721c24;
+            margin-bottom: 10px;
+            animation: slideIn 0.3s ease-out;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .flash-messages li:hover {
+            background: #f1b0b7;
+        }
+
+        .flash-messages li.fade-out {
+            animation: fadeOut 0.5s ease-out forwards;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 8px;
+            right: 12px;
+            color: #721c24;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+        }
+
+        .close-btn:hover {
+            opacity: 1;
+        }
+
+        .forgot-password {
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        .forgot-password a {
+            color: #667eea;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .forgot-password a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 30px 20px;
+            }
+            
+            h2 {
+                font-size: 24px;
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+                transform: translateX(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Chào mừng trở lại!</h2>
+        <p class="subtitle">Đăng nhập để tiếp tục</p>
+        
+        <form method="post">
+            <div class="input-group">
+                <input type="text" name="username" placeholder=" " required>
+                <label>Tên đăng nhập</label>
+                <span class="icon">👤</span>
+            </div>
+            
+            <div class="input-group">
+                <input type="password" name="password" placeholder=" " required>
+                <label>Mật khẩu</label>
+                <span class="icon">🔒</span>
+            </div>
+            
+            <button type="submit" class="submit-btn">Đăng nhập</button>
+        </form>
+        
+        <div class="forgot-password">
+            <a href="#" onclick="alert('Tính năng này đang được phát triển')">Quên mật khẩu?</a>
+        </div>
+        
+        <p class="switch-form">Chưa có tài khoản? <a href="/register">Đăng ký ngay</a></p>
+        
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <ul class="flash-messages">
+                    {% for message in messages %}
+                        <li onclick="removeMessage(this)">
+                            {{ message }}
+                            <span class="close-btn" onclick="event.stopPropagation(); removeMessage(this.parentElement)">×</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <script>
+        // Flash messages auto-hide
+        function removeMessage(element) {
+            element.classList.add('fade-out');
+            setTimeout(() => {
+                element.remove();
+                // Remove the entire ul if no messages left
+                const messagesList = document.querySelector('.flash-messages');
+                if (messagesList && messagesList.children.length === 0) {
+                    messagesList.remove();
+                }
+            }, 500);
+        }
+
+        // Auto-hide flash messages after 5 seconds
+        document.addEventListener('DOMContentLoaded', function() {
+            const flashMessages = document.querySelectorAll('.flash-messages li');
+            flashMessages.forEach(message => {
+                setTimeout(() => {
+                    if (message.parentElement) {
+                        removeMessage(message);
+                    }
+                }, 5000); // 5 seconds
+            });
+        });
+
+        // Add floating label effect
+        document.querySelectorAll('.input-group input').forEach(input => {
+            input.addEventListener('focus', function() {
+                this.parentElement.classList.add('focused');
+            });
+            
+            input.addEventListener('blur', function() {
+                if (this.value === '') {
+                    this.parentElement.classList.remove('focused');
+                }
+            });
+        });
+
+        // Add ripple effect to button
+        document.querySelector('.submit-btn').addEventListener('click', function(e) {
+            let ripple = document.createElement('span');
+            ripple.classList.add('ripple');
+            this.appendChild(ripple);
+            
+            let x = e.clientX - e.target.offsetLeft;
+            let y = e.clientY - e.target.offsetTop;
+            
+            ripple.style.left = x + 'px';
+            ripple.style.top = y + 'px';
+            
+            setTimeout(() => {
+                ripple.remove();
+            }, 600);
+        });
+    </script>
+</body>
+</html>
